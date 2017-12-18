@@ -5,7 +5,7 @@ Cynomys is a high performance data synchronization tool, which recovery sql stat
 
 ### note
 
-For MySQL 5.6.6 users, binlog_checksum system variable is NOT supported by Cynomys at the moment, and set binlog_format='ROW' please set it to NONE.
+For MySQL 5.6.6 users, binlog_checksum system variable is NOT supported by Cynomys at the moment, and set binlog_format='MIXED' please set it to NONE.
 
 ### releases
 
