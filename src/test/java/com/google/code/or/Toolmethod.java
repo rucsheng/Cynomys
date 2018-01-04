@@ -3,9 +3,19 @@ package com.google.code.or;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.code.db.Constant;
+
 /**
  * @author ys
  * @usage This class contains some useful tool methods
+ */
+/**
+ * @author ys
+ *
+ */
+/**
+ * @author ys
+ *
  */
 public class Toolmethod {
 	
@@ -45,4 +55,21 @@ public class Toolmethod {
     	} 
     	return null;
    }
+    
+    /**
+     * @param TABLE_NAME
+     * @param NumOfColumn
+     * @return a string generate for INSERT preparestatement
+     */
+    public static String prepareINSERT(String TABLE_NAME, int NumOfColumn) {
+    	int i = 0;
+    	StringBuffer sBuffer = new StringBuffer("");
+    	String qm = "?";
+    	sBuffer.append("INSERT INTO ").append(TABLE_NAME).append(" VALUES (");
+    	while(i < NumOfColumn - 1) {
+    		sBuffer.append(qm).append(Constant.Comma);
+    	}
+    	sBuffer.append(qm).append(")");
+    	return sBuffer.toString();
+    }
 }

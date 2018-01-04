@@ -93,14 +93,17 @@ public class OpenReplicatorTest {
                 	String result = "";
                 	while(m_write.find()){
                 		String value[] = m_write.group().split("\\,");
-                		for (int j=0; j<value.length; j++){
+                		
+                		for (int j=0; j<value.length-1; j++){
                 			if(tmpColumn.get(j+1) > 9){
+                				//if column type > 9, let it be string
                 				result += Toolmethod.addApos(value[j].replace(" ", "")) + Constant.Comma;
                 			}else {
+                				//else let it be number
 								result += value[j].replace(" ", "") + Constant.Comma;
 							}                			
                 		}       
-                		values.append(Toolmethod.addPar(result.substring(0, result.length() - 1)))
+                		values.append(Toolmethod.addPar(result + value[value.length-1]))
           		              .append(Constant.Comma);
             			result = "";
                 	}
