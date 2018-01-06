@@ -65,7 +65,7 @@ public class Toolmethod {
     	int i = 0;
     	StringBuffer sBuffer = new StringBuffer("");
     	String qm = "?";
-    	sBuffer.append("INSERT INTO ").append(TABLE_NAME).append(" VALUES (");
+    	sBuffer.append(Constant.Insval).append(TABLE_NAME).append(" VALUES (");
     	while(i < NumOfColumn - 1) {
     		sBuffer.append(qm).append(Constant.Comma);
     	}

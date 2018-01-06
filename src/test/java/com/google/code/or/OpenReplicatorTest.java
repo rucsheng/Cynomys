@@ -2,18 +2,17 @@ package com.google.code.or;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.omg.CORBA.INTERNAL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.code.db.ConMariadb;
-import com.google.code.db.ConMonetDB;
 import com.google.code.db.ConRedis;
 import com.google.code.db.Constant;
 import com.google.code.or.binlog.BinlogEventListener;
@@ -40,7 +39,7 @@ public class OpenReplicatorTest {
 		    public void onEvents(BinlogEventV4 event){
 		        String events = event.toString();
 		    	String header = events.substring(0, events.indexOf('='));
-//		    	System.out.println(events);
+		    	System.out.println(events);
 		    	//SQL appears in log
 		    	String NorSQL = "";
 		    	switch (header) {
@@ -87,37 +86,35 @@ public class OpenReplicatorTest {
                 	break;
                 case "WriteRowsEventheader":              	
                 	/*match column values*/
-                	StringBuffer values = new StringBuffer("VALUES ");
-                	Pattern p_write = Pattern.compile("(?<=ns\\=\\[).*?(?=\\])");
+                	try {
+                	Connection conn = ConMariadb.getMariaCon();
+
+                	Pattern p_write = Pattern.compile(Constant.Colvalue_reg);
                 	Matcher m_write = p_write.matcher(events);
-                	String result = "";
+                	Pattern p_count = Pattern.compile(Constant.Colcount_reg);
+                	Matcher m_count = p_count.matcher(events);
+                	while (m_count.find()) {
+                       int NumofCol = Integer.parseInt(m_count.group());
+                  	   java.sql.PreparedStatement pstmt = conn
+                				.prepareStatement(Toolmethod.prepareINSERT(Toolmethod.getRes(Constant.Tableid_reg, events), NumofCol));    
+					
                 	while(m_write.find()){
                 		String value[] = m_write.group().split("\\,");
-                		
-                		for (int j=0; j<value.length-1; j++){
-                			if(tmpColumn.get(j+1) > 9){
-                				//if column type > 9, let it be string
-                				result += Toolmethod.addApos(value[j].replace(" ", "")) + Constant.Comma;
-                			}else {
-                				//else let it be number
-								result += value[j].replace(" ", "") + Constant.Comma;
-							}                			
-                		}       
-                		values.append(Toolmethod.addPar(result + value[value.length-1]))
-          		              .append(Constant.Comma);
-            			result = "";
+                		for (int j=0; j<value.length-1; j++){   
+                			pstmt.setObject(j+1, value[j].replace(" ", ""));
+							}
+                		pstmt.addBatch();
+                		}     
+                	int[] ResultSet = pstmt.executeBatch();
                 	}
+                	
                 	tmpColumn.clear();
             		i = 1;
-                	//SQL that was rebuild
-                	String SpSQL = Constant.Insval + " " + TableMap.get(Toolmethod.getRes("(?<=tableId\\=).*?(?=\\,)", events))  
-                	+ " " + values.toString().substring(0, values.toString().length()-1) + Constant.Semicolon;                	
-                	try {
-						ConMariadb.execQuery(SpSQL);
-					} catch (Exception e) {
+                	}catch (Exception e) {
 						// TODO: handle exception
 					}
-                	System.out.println(SpSQL);
+                	
+                	//SQL that was rebuild                	               	
                 case "RotateEventheader":
                 	//DO Nothing
                 	break;
