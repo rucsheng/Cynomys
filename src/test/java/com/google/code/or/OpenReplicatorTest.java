@@ -3,8 +3,12 @@ package com.google.code.or;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,8 +19,10 @@ import org.slf4j.LoggerFactory;
 import com.google.code.db.ConMariadb;
 import com.google.code.db.ConRedis;
 import com.google.code.db.Constant;
+import com.google.code.db.MultiThreadExecQuery;
 import com.google.code.or.binlog.BinlogEventListener;
 import com.google.code.or.binlog.BinlogEventV4;
+import com.mysql.jdbc.PreparedStatement;
 
 public class OpenReplicatorTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(OpenReplicatorTest.class);
@@ -28,6 +34,7 @@ public class OpenReplicatorTest {
 	    final Map<Integer, String>DBMap = new HashMap<>();
 	    final Map<String, String>TableMap = new HashMap<>();
 		final Map<Integer, Integer>tmpColumn = new HashMap<>();
+		final Queue<String> queue = new LinkedList<>();
 	    or.setUser(Constant.MySQLUser);
 		or.setPassword(Constant.MySQLPwd);
 		or.setHost(Constant.MySQLhost);
@@ -39,41 +46,67 @@ public class OpenReplicatorTest {
 		    public void onEvents(BinlogEventV4 event){
 		        String events = event.toString();
 		    	String header = events.substring(0, events.indexOf('='));
-		    	System.out.println(events);
+		    	//System.out.println(events);
 		    	//SQL appears in log
-		    	String NorSQL = "";
+		    	
 		    	switch (header) {
 				case "QueryEventheader":
 					int index = events.lastIndexOf("sql");
 					String statement = events.substring(index + 4);
-					if (statement.contains("BEGIN")) {
-					    break;
+					while(!statement.contains("BEGIN")){
+						queue.add(statement + Constant.Semicolon);
+						break;
 					}
-					if(!statement.contains("BEGIN")) {
-					    NorSQL = NorSQL + statement + Constant.Semicolon;
-					}			
-					try {
-						ConMariadb.execQuery(NorSQL);
-					} catch (Exception e) {
-						// TODO: handle exception
-					}
-					System.out.println(NorSQL);			
 					break;
                 case "XidEventheader":
                 	//TODO trans to MQ
+                	try {
+            			Connection con = DriverManager.getConnection("jdbc:mariadb://10.77.50.80:3307/test", "root", null);
+            			con.setAutoCommit(false);
+            			while(!queue.peek().contains("INSERT")) {
+            				queue.poll();
+            			}
+            			int indexOfFirstpar = queue.peek().indexOf('(');
+    		    		int indexOfINTO = queue.peek().indexOf("INTO ");
+    		    		String tmpTableName = queue.peek().substring(indexOfINTO + 5, indexOfFirstpar);
+            			int NumOfCol = Toolmethod.countComma(queue.peek())/2 + 1;
+    		    		java.sql.PreparedStatement pstmt1 = con
+    		    				.prepareStatement(Toolmethod.prepareINSERT(tmpTableName, NumOfCol));
+            			            		    
+            			while(!queue.isEmpty()) {
+            		    		String tmpStatement = queue.peek();
+            		    		int indexOfSecondpar = tmpStatement.lastIndexOf('(');
+            		    		String [] tmpVal = queue.poll()
+            		    				.substring(indexOfSecondpar + 1, tmpStatement.length() - 2).split("\\,");
+            		    		for(int i=0; i<tmpVal.length; i++) {
+            		    			if (tmpVal[i].contains("'")) {
+            		    				pstmt1.setObject(i + 1, Toolmethod.eraseApos(tmpVal[i]));
+            		    			}else {
+										pstmt1.setObject(i + 1, tmpVal[i]);
+									}   
+            		    		}
+            		    		pstmt1.addBatch();           		    	  
+            		      }	
+            		    pstmt1.executeBatch();
+            	    	con.commit();
+            	    	 System.out.println("Commit a TX at" + System.currentTimeMillis());
+            		} catch (Exception e) {
+            			// TODO: handle exception
+            			e.printStackTrace();
+            		}
                     break;
                 case "TableMapEventheader":
                 	/*match tableid and tablename*/
-                	Pattern p_tableid = Pattern.compile("(?<=tableId\\=).*?(?=\\,)");
+                	Pattern p_tableid = Pattern.compile(Constant.Tableid_reg);
                 	Matcher m_tableid = p_tableid.matcher(events);
-                	Pattern p_tablename = Pattern.compile("(?<=tableName\\=).*?(?=\\,)");
+                	Pattern p_tablename = Pattern.compile(Constant.Tablename_reg);
                 	Matcher m_tablename = p_tablename.matcher(events);
                 	if(m_tableid.find() && m_tablename.find()) {
                 		TableMap.put(m_tableid.group(), m_tablename.group());
                 	}
                 	/*match column type*/
                 	int i = 1;
-                	Pattern p_map = Pattern.compile("(?<=es\\=\\[).*?(?=\\])");
+                	Pattern p_map = Pattern.compile(Constant.Coltype_reg);
                 	Matcher m_map = p_map.matcher(events);
                 	if(m_map.find()){
                 		String types[] = m_map.group().split("\\,"); 
@@ -105,7 +138,7 @@ public class OpenReplicatorTest {
 							}
                 		pstmt.addBatch();
                 		}     
-                	int[] ResultSet = pstmt.executeBatch();
+                	  pstmt.executeBatch();
                 	}
                 	
                 	tmpColumn.clear();

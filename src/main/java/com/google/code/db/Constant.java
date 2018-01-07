@@ -25,7 +25,7 @@ public class Constant {
    
    public static final int Serverid = 1;
    
-   public static final int BinlogPosition = 107;
+   public static final int BinlogPosition = 190;
    
    public static final String Comma = ",";
    
@@ -35,8 +35,12 @@ public class Constant {
    
    public static final String Tableid_reg = "(?<=tableId\\=).*?(?=\\,)";
    
+   public static final String Tablename_reg = "(?<=tableName\\=).*?(?=\\,)";
+   
    public static final String Colvalue_reg = "(?<=ns\\=\\[).*?(?=\\])";
    
    public static final String Colcount_reg = "(?<=count\\=).*?(?=\\,)";
+   
+   public static final String Coltype_reg = "(?<=es\\=\\[).*?(?=\\])";
    
 }

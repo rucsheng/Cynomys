@@ -11,12 +11,11 @@ public class RegTest {
 //	Matcher matcher = pattern.matcher(string);
 //	if(matcher.find()){
 //    System.out.println(matcher.group());
-// }
+// }	
 	Pattern pattern2 = Pattern.compile("(?<=ns\\=\\[).*?(?=\\])");
 	Matcher matcher2 = pattern2.matcher(string);
 	while(matcher2.find()){
 		System.out.println(matcher2.group(0));
 	}
-
    }
 }

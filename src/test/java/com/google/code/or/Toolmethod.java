@@ -27,7 +27,26 @@ public class Toolmethod {
 		String apos = "'";
 		return apos + input + apos;
 	}
-
+	/**
+	 * @param input
+	 * @return make "'" disappear
+	 */
+	public static String eraseApos(String input) {
+		return input.substring(1, input.length() - 1);
+	}
+    /**
+     * @param input
+     * @return count the number of comma, so that we can get the column number of table
+     */
+    public static int countComma(String input) {
+		int count = 0;
+    	for(int i=0; i<input.length(); i++) {
+			if(input.charAt(i) == ','){
+				count ++;
+			}
+		}
+    	return count;
+	}
     /**
      * @param input
      * @return String with Parentheses
@@ -68,8 +87,9 @@ public class Toolmethod {
     	sBuffer.append(Constant.Insval).append(TABLE_NAME).append(" VALUES (");
     	while(i < NumOfColumn - 1) {
     		sBuffer.append(qm).append(Constant.Comma);
+    		i ++;
     	}
-    	sBuffer.append(qm).append(")");
+    	sBuffer.append(qm).append(")").append(Constant.Semicolon);
     	return sBuffer.toString();
     }
 }
